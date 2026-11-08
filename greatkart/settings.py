@@ -150,36 +150,36 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-
-# STATIC_URL = '/static/'
-# STATIC_ROOT = BASE_DIR /'static'
-# STATICFILES_DIRS = [
-#     'greatkart/static',
-# ]
-
-# AWS S3 Static Files Configuration
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
-AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=86400',
-}
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
-AWS_LOCATION = 'static'
-
+# Local static files (enabled for Docker/local dev)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     'greatkart/static',
 ]
-STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
-STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-DEFAULT_FILE_STORAGE = 'greatkart.media_storages.MediaStorage'
+# ── AWS S3 Static Files Configuration (commented out for local/Docker dev) ──
+# AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+# AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+# AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+# AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+# AWS_S3_OBJECT_PARAMETERS = {
+#     'CacheControl': 'max-age=86400',
+# }
+# AWS_S3_FILE_OVERWRITE = False
+# AWS_DEFAULT_ACL = 'public-read'
+# AWS_LOCATION = 'static'
+#
+# STATICFILES_DIRS = [
+#     'greatkart/static',
+# ]
+# STATIC_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+# STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+#
+# DEFAULT_FILE_STORAGE = 'greatkart.media_storages.MediaStorage'
 
 # media files configuration
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR /'media'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 from django.contrib.messages import constants as messages
@@ -194,3 +194,86 @@ EMAIL_PORT = config('EMAIL_PORT', cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REST FRAMEWORK & API CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'GreatKart E-Commerce API',
+    'DESCRIPTION': '''
+## GreatKart REST API
+
+A full-featured Django e-commerce REST API with:
+- 🔐 JWT Authentication
+- 🛍️ Product catalog with categories, variations, and gallery
+- 🛒 Shopping cart (guest & authenticated)
+- 💳 Order placement and payment confirmation
+- ⭐ Product reviews and ratings
+- 👤 User profile management
+
+### Authentication
+1. Register at `/api/auth/register/`
+2. Login at `/api/auth/login/` → get `access` token
+3. Click **Authorize** (🔒) and enter: `Bearer <your_access_token>`
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': False,
+        'defaultModelsExpandDepth': 2,
+        'defaultModelExpandDepth': 2,
+        'docExpansion': 'list',
+        'filter': True,
+    },
+    'TAGS': [
+        {'name': 'Categories', 'description': 'Product category operations'},
+        {'name': 'Products', 'description': 'Product listing, detail, and search'},
+        {'name': 'Auth', 'description': 'User registration, login, and token management'},
+        {'name': 'Profile', 'description': 'User profile management'},
+        {'name': 'Cart', 'description': 'Shopping cart operations'},
+        {'name': 'Orders', 'description': 'Order placement and tracking'},
+        {'name': 'Reviews', 'description': 'Product review submission'},
+    ],
+}
+
+# CORS (allow all origins for development)
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Add new apps
+INSTALLED_APPS += [
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
+    'corsheaders',
+    'api',
+]
+
+# Add CORS middleware (must be before CommonMiddleware)
+MIDDLEWARE.insert(2, 'corsheaders.middleware.CorsMiddleware')

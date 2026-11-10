@@ -118,11 +118,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class AccountSerializer(serializers.ModelSerializer):
-    profile = UserProfileSerializer(source='userprofile', read_only=True)
+    profile = serializers.SerializerMethodField()
 
     class Meta:
         model = Account
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'phone_number', 'date_joined', 'profile']
+        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'phone_number', 'date_joined', 'is_staff', 'is_admin', 'profile']
+
+    def get_profile(self, obj):
+        try:
+            if hasattr(obj, 'userprofile') and obj.userprofile:
+                return UserProfileSerializer(obj.userprofile).data
+        except Exception:
+            pass
+        return None
 
 
 class ChangePasswordSerializer(serializers.Serializer):

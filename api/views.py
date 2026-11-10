@@ -186,7 +186,13 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             d = serializer.validated_data
-            username = d['email'].split('@')[0]
+            base_username = d['email'].split('@')[0]
+            username = base_username
+            counter = 1
+            while Account.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
             user = Account.objects.create_user(
                 first_name=d['first_name'],
                 last_name=d['last_name'],
@@ -194,17 +200,21 @@ class RegisterView(APIView):
                 username=username,
                 password=d['password'],
             )
-            user.phone_number = d['phone_number']
+            user.phone_number = d.get('phone_number', '')
+            user.is_active = True
             user.save()
 
             # Create user profile
-            UserProfile.objects.create(
+            UserProfile.objects.get_or_create(
                 user=user,
-                profile_picture='default/default-user.png',
+                defaults={'profile_picture': 'default/default-user.png'},
             )
 
+            tokens = get_tokens_for_user(user)
+
             return Response({
-                'message': 'Registration successful. Please check your email to activate your account.',
+                'message': 'Registration successful.',
+                'tokens': tokens,
                 'user': AccountSerializer(user).data,
             }, status=status.HTTP_201_CREATED)
 
